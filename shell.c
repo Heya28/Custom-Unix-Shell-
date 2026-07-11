@@ -29,14 +29,7 @@ char** tokenize(char* inputLine){
             token[tokenIndex]=inputLine[i];
             tokenIndex++;
         }
-    }
-    if(tokenIndex!=0){
-        token[tokenIndex]='\0';  // incase of no separator at the end of inputline (edge case eg. ls)
-        // allocate memory
-        alltokens[tokenNo]=malloc(MAX_TOKEN_SIZE*sizeof(char));
-        strcpy(alltokens[tokenNo],token);
-        tokenNo++;
-    }  
+    } 
     alltokens[tokenNo]=NULL; // required for execvp(), otherwise it keeps reading garbage.
     free(token); // temporary memory not required after loop ends. 
     return alltokens;
@@ -50,8 +43,9 @@ int main(int argc, char* argv[]){
         memset(inputLine,0,sizeof(inputLine));
         // take input
         printf("$ ");
-        scanf("%[^\n]");
-        getchar(); // get rid of \n character before next iteration
+        if(fgets(inputLine, MAX_INPUT_SIZE, stdin)==NULL){
+            break; // exits in case scenario of EOF ( Ctrl+ D )
+        } // stores both \n and \0 No need for edge case separator handling
 
         alltokens=tokenize(inputLine);
         // free alltokens memory
