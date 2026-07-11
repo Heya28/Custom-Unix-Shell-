@@ -18,7 +18,7 @@ char** tokenize(char* inputLine){
 
     for(int i=0;i<len;i++){
         if(inputLine[i]==' '|| inputLine[i]=='\t' || inputLine[i]=='\n' ){
-            if(tokenIndex!=0){
+            if(tokenIndex!=0){ // handles case: only enter ( \n\0 ) && more than one whitespace
             token[tokenIndex]='\0'; // end of the token append. 
             alltokens[tokenNo]=malloc(MAX_TOKEN_SIZE*sizeof(char));
             strcpy(alltokens[tokenNo],token); // copy token char sequence ending with \0 to alltokens[tokenNo]
@@ -32,11 +32,14 @@ char** tokenize(char* inputLine){
     } 
     alltokens[tokenNo]=NULL; // required for execvp(), otherwise it keeps reading garbage.
     free(token); // temporary memory not required after loop ends. 
+    if(alltokens[0]==NULL){
+        free(alltokens); // empty inputLine: user only pressed Enter. Handles execvp(NULL,..) crash later
+    }
     return alltokens;
 }
 
 int main(int argc, char* argv[]){
-    char inputLine[1024];
+    char inputLine[MAX_INPUT_SIZE];
     char **alltokens;
     while(1){
         // clear out old input
@@ -48,6 +51,7 @@ int main(int argc, char* argv[]){
         } // stores both \n and \0 No need for edge case separator handling
 
         alltokens=tokenize(inputLine);
+        // 
         // free alltokens memory
         for(int k=0; alltokens[k]!=NULL;k++){
             free(alltokens[k]);
