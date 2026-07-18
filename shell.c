@@ -15,12 +15,31 @@ char** tokenize(char* inputLine){
     int len=strlen(inputLine);
     char **alltokens = malloc(MAX_NUM_TOKENS * sizeof(char *));
     char *token=malloc(MAX_TOKEN_SIZE * sizeof(char));
+    // malloc failure
+    if(alltokens==NULL || token==NULL){
+        perror("malloc");
+        free(alltokens);
+        free(token);
+        return NULL; // this is caught by if(alltokens==NULL)
+    }
 
     for(int i=0;i<len;i++){
         if(inputLine[i]==' '|| inputLine[i]=='\t' || inputLine[i]=='\n' ){
             if(tokenIndex!=0){ // handles case: only enter ( \n\0 ) && more than one whitespace
             token[tokenIndex]='\0'; // end of the token append. 
             alltokens[tokenNo]=malloc(MAX_TOKEN_SIZE*sizeof(char));
+
+            if(alltokens[tokenNo]==NULL){
+                // malloc crash
+                perror("malloc");
+                free(token);
+                for(int j=0;j<tokenNo;j++){
+                    free(alltokens[j]);
+                }
+                free(alltokens);
+                return NULL;
+
+            }
             strcpy(alltokens[tokenNo],token); // copy token char sequence ending with \0 to alltokens[tokenNo]
             tokenNo++;
             tokenIndex=0; // next word starts writing from index 0, essentially overwriting the previous. 
@@ -49,6 +68,10 @@ int main(int argc, char* argv[]){
 
         alltokens=tokenize(inputLine);
         // Handle the freeing of alltokens memory incase of empty inputline in main() instead of in tokenize() --> return of dangling pointer
+
+        if(alltokens==NULL){
+            continue;
+        }
         if(alltokens[0]==NULL){
         free(alltokens); // empty inputLine: user only pressed Enter. Handles execvp(NULL,..) crash later
         continue;
