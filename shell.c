@@ -8,6 +8,18 @@
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
 
+void free_tokens(char** alltokens){
+    if(alltokens==NULL){
+        return;
+    }
+    int i=0;
+    while(alltokens[i]!=NULL){
+        free(alltokens[i]);
+        i++;
+    }
+    free(alltokens);
+}
+
 // spilt the input string by space and return the array of strings. 
 char** tokenize(char* inputLine){
     int tokenIndex=0;
@@ -15,6 +27,7 @@ char** tokenize(char* inputLine){
     int len=strlen(inputLine);
     char **alltokens = malloc(MAX_NUM_TOKENS * sizeof(char *));
     char *token=malloc(MAX_TOKEN_SIZE * sizeof(char));
+
     // malloc failure
     if(alltokens==NULL || token==NULL){
         perror("malloc");
@@ -35,7 +48,7 @@ char** tokenize(char* inputLine){
                 free(token);
                 for(int j=0;j<tokenNo;j++){
                     free(alltokens[j]);
-                }
+                } 
                 free(alltokens);
                 return NULL;
 
@@ -57,11 +70,20 @@ char** tokenize(char* inputLine){
 int main(int argc, char* argv[]){
     char inputLine[MAX_INPUT_SIZE];
     char **alltokens;
+    char cwd[256]; 
+
     while(1){
+        if(getcwd(cwd,sizeof(cwd))==NULL){
+            perror("getcwd");
+            continue;
+        }
+        
         // clear out old input
         memset(inputLine,0,sizeof(inputLine));
+
         // take input
-        printf("$ ");
+        printf("%s $ ", cwd);
+
         if(fgets(inputLine, MAX_INPUT_SIZE, stdin)==NULL){
             break; // exits in case scenario of EOF ( Ctrl+ D )
         } // stores both \n and \0 No need for edge case separator handling
@@ -77,11 +99,32 @@ int main(int argc, char* argv[]){
         continue;
         }
 
+        // Handling cd command
+        if(strcmp(alltokens[0], "cd")==0){
+            if(alltokens[1]==NULL || alltokens[2]!=NULL){
+                // unsuccessful command cd
+                fprintf(stderr,"Invalid argument.\n");
+                free_tokens(alltokens);
+                continue;
+            }else{
+                // successful command cd
+                int cd_rc=chdir(alltokens[1]);
+                if(cd_rc==-1){
+                    perror("chdir");
+                }
+                free_tokens(alltokens);
+                continue;
+            }
+        }
+        
+
         // fork exec wait reap
         pid_t rc=fork();
         if(rc<0){
             perror("fork failed");
-            exit(1);
+            // shell should continue not exit(1)
+            free_tokens(alltokens);
+            continue;
         }else if(rc==0){
             // child replaces itself with requested program
             execvp(alltokens[0],alltokens);
@@ -96,10 +139,7 @@ int main(int argc, char* argv[]){
         }
 
         // free alltokens memory
-        for(int k=0; alltokens[k]!=NULL;k++){
-            free(alltokens[k]);
-        }
-        free(alltokens);
+        free_tokens(alltokens);
     }
     return 0;
 }
