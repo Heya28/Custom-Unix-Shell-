@@ -32,9 +32,6 @@ char** tokenize(char* inputLine){
     } 
     alltokens[tokenNo]=NULL; // required for execvp(), otherwise it keeps reading garbage.
     free(token); // temporary memory not required after loop ends. 
-    if(alltokens[0]==NULL){
-        free(alltokens); // empty inputLine: user only pressed Enter. Handles execvp(NULL,..) crash later
-    }
     return alltokens;
 }
 
@@ -51,7 +48,30 @@ int main(int argc, char* argv[]){
         } // stores both \n and \0 No need for edge case separator handling
 
         alltokens=tokenize(inputLine);
-        // 
+        // Handle the freeing of alltokens memory incase of empty inputline in main() instead of in tokenize() --> return of dangling pointer
+        if(alltokens[0]==NULL){
+        free(alltokens); // empty inputLine: user only pressed Enter. Handles execvp(NULL,..) crash later
+        continue;
+        }
+
+        // fork exec wait reap
+        pid_t rc=fork();
+        if(rc<0){
+            perror("fork failed");
+            exit(1);
+        }else if(rc==0){
+            // child replaces itself with requested program
+            execvp(alltokens[0],alltokens);
+            perror("execvp");
+            exit(1);
+        }else{
+            // parent process 
+            pid_t wait_rc=wait(NULL);
+            if(wait_rc==-1){
+                perror("wait"); // no exit only report
+            }
+        }
+
         // free alltokens memory
         for(int k=0; alltokens[k]!=NULL;k++){
             free(alltokens[k]);

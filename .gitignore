@@ -1,0 +1,15 @@
+# Executables
+shell
+shell.exe
+*.exe
+
+# Object files
+*.o
+*.obj
+
+# Debug files
+*.dSYM/
+*.pdb
+
+# VS Code
+.vscode/
