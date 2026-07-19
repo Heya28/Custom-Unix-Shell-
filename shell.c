@@ -3,10 +3,12 @@
 #include<sys/wait.h>
 #include<unistd.h>
 #include<string.h>
+#include<stdbool.h>
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
+#define MAX_PATH_LENGTH 256
 
 void free_tokens(char** alltokens){
     if(alltokens==NULL){
@@ -28,7 +30,7 @@ char** tokenize(char* inputLine){
     char **alltokens = malloc(MAX_NUM_TOKENS * sizeof(char *));
     char *token=malloc(MAX_TOKEN_SIZE * sizeof(char));
 
-    // malloc failure
+    // malloc failure // 
     if(alltokens==NULL || token==NULL){
         perror("malloc");
         free(alltokens);
@@ -43,7 +45,7 @@ char** tokenize(char* inputLine){
             alltokens[tokenNo]=malloc(MAX_TOKEN_SIZE*sizeof(char));
 
             if(alltokens[tokenNo]==NULL){
-                // malloc crash
+                // malloc crash // 
                 perror("malloc");
                 free(token);
                 for(int j=0;j<tokenNo;j++){
@@ -70,30 +72,40 @@ char** tokenize(char* inputLine){
 int main(int argc, char* argv[]){
     char inputLine[MAX_INPUT_SIZE];
     char **alltokens;
-    char cwd[256]; 
+    char cwd[MAX_PATH_LENGTH]; 
 
     while(1){
+        // reap background proceeses // 
+        int back_status;
+        while(waitpid(-1,&back_status,WNOHANG)>0){ // return -1 incase of no children. 
+            printf("Shell: Background process finished.\n");
+            if(WIFEXITED(back_status)){
+                    printf("EXITSTATUS: %d\n",WEXITSTATUS(back_status));
+            }
+        } 
+
+        // print cwd // 
         if(getcwd(cwd,sizeof(cwd))==NULL){
             perror("getcwd");
             continue;
         }
-        
-        // clear out old input
-        memset(inputLine,0,sizeof(inputLine));
-
-        // take input
         printf("%s $ ", cwd);
 
+        // clear out old input // 
+        memset(inputLine,0,sizeof(inputLine));
+
+        // take input // 
         if(fgets(inputLine, MAX_INPUT_SIZE, stdin)==NULL){
             break; // exits in case scenario of EOF ( Ctrl+ D )
         } // stores both \n and \0 No need for edge case separator handling
 
-        alltokens=tokenize(inputLine);
-        // Handle the freeing of alltokens memory incase of empty inputline in main() instead of in tokenize() --> return of dangling pointer
+        // get alltokens // 
+        alltokens=tokenize(inputLine); // Handle the freeing of alltokens memory incase of empty inputline in main() instead of in tokenize() --> return of dangling pointer
 
         if(alltokens==NULL){
             continue;
         }
+
         if(alltokens[0]==NULL){
         free(alltokens); // empty inputLine: user only pressed Enter. Handles execvp(NULL,..) crash later
         continue;
@@ -117,6 +129,23 @@ int main(int argc, char* argv[]){
             }
         }
         
+        // background process
+        bool background=false;
+        int k=0;
+        while(alltokens[k]!=NULL){
+            k++;
+        }
+        if((k>0) && strcmp(alltokens[k-1],"&")==0){
+            background=true;
+            // remove & for execvp(...)
+            free(alltokens[k-1]);
+            alltokens[k-1]=NULL;
+        }
+        if(alltokens[0]==NULL){
+            fprintf(stderr,"Invalid input.\n");
+            free(alltokens);
+            continue;
+        }
 
         // fork exec wait reap
         pid_t rc=fork();
@@ -132,13 +161,15 @@ int main(int argc, char* argv[]){
             exit(1);
         }else{
             // parent process 
-            int status;
-            pid_t wait_rc=wait(&status); // wait_rc stores the pid of child process.     
-            if(wait_rc==-1){ 
-                perror("wait"); // no exit only report
-            }
-            if(WIFEXITED(status)){
-                printf("EXITSTATUS: %d\n",WEXITSTATUS(status));
+            if(!background){
+                int status;
+                pid_t wait_rc=waitpid(rc,&status,0); // wait_rc stores the pid of child process.     
+                if(wait_rc==-1){ 
+                    perror("waitpid"); // no exit only report
+                }
+                if(WIFEXITED(status)){
+                    printf("EXITSTATUS: %d\n",WEXITSTATUS(status));
+                }
             }
         }
 
