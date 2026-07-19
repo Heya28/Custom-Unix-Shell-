@@ -152,7 +152,6 @@ Errors are reported using `perror()` whenever appropriate.
 ├── README.md
 └── shell.c
 
-Current implementation includes:
 ```
 
 Current implementation includes:
