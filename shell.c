@@ -132,9 +132,13 @@ int main(int argc, char* argv[]){
             exit(1);
         }else{
             // parent process 
-            pid_t wait_rc=wait(NULL);
-            if(wait_rc==-1){
+            int status;
+            pid_t wait_rc=wait(&status); // wait_rc stores the pid of child process.     
+            if(wait_rc==-1){ 
                 perror("wait"); // no exit only report
+            }
+            if(WIFEXITED(status)){
+                printf("EXITSTATUS: %d",WEXITSTATUS(status));
             }
         }
 
