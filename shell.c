@@ -138,7 +138,7 @@ int main(int argc, char* argv[]){
                 perror("wait"); // no exit only report
             }
             if(WIFEXITED(status)){
-                printf("EXITSTATUS: %d",WEXITSTATUS(status));
+                printf("EXITSTATUS: %d\n",WEXITSTATUS(status));
             }
         }
 
